@@ -28,6 +28,7 @@ namespace hangman
             {
                 Margin = new Thickness(250, 30, 0, 0),
                 FontSize = 20,
+                Foreground = new SolidColorBrush(Colors.Red),
                 TextWrapping = TextWrapping.Wrap
             };
             /* We hold wrong characters guessed in the WrongBox */
@@ -43,8 +44,9 @@ namespace hangman
             SwapButtonState();
 
             CharList.Items.Clear();
-            for (char i = 'A'; i <= 'Z'; ++i)
+            for (char i = 'א'; i <= 'ת'; i++)
             {
+                if (IsEndChar(i)) continue;
                 _ = CharList.Items.Add(i);
             }
             Grid.SetRow(WrongBox, 0);
@@ -54,17 +56,31 @@ namespace hangman
             int Space = 0;
             WordInstance.LoadWord(); /* LoadANewWord */
             WordNow = WordInstance.TheWord;
-            foreach (char c in WordNow)
+            string hebrewWord = WordNow.Value.Replace("\r\n\r\n", "");
+            foreach (char c in hebrewWord.Reverse())
             {
                 /*We make the word display in run time in this loop.*/
                 Label lbl = new Label();
-                Canvas can = new Canvas
+                if (c != ' ')
                 {
-                    Background = Brushes.Black,
-                    Width = 15,
-                    Height = 3,
-                    Margin = new Thickness(-220 + Space, 0, 0, 0)
-                };
+                    Canvas can = new Canvas
+                    {
+                        Background = Brushes.Black,
+                        Width = 15,
+                        Height = 3,
+                        Margin = new Thickness(-220 + Space, 0, 0, 0)
+                    };
+                }
+                else
+                {
+                    Canvas can = new Canvas
+                    {
+                        Background = Brushes.Black,
+                        Width = 15,
+                        Height = 3,
+                        Margin = new Thickness(-220 + Space, 0, 0, 0)
+                    };
+                }
                 Grid.SetRow(can, 1);
                 Grid.SetColumn(can, 1);
                 _ = Grid.Children.Add(can);
@@ -126,20 +142,81 @@ namespace hangman
             }
         }
 
+        private char ReturnEndCharacter(char c)
+        {
+            Dictionary<char, char> endChars = new Dictionary<char, char>
+            {
+                { 'כ', 'ך' },
+                { 'מ', 'ם' },
+                { 'נ', 'ן' },
+                { 'פ', 'ף' },
+                { 'צ', 'ץ' }
+            };
+
+            return endChars[c];
+        }
+
+        private bool IsInDictionary(char c)
+        {
+            Dictionary<char, char> endChars = new Dictionary<char, char>();
+            endChars.Add('כ', 'ך');
+            endChars.Add('מ', 'ם');
+            endChars.Add('נ', 'ן');
+            endChars.Add('פ', 'ף');
+            endChars.Add('צ', 'ץ');
+
+            bool existsInDictionary = endChars.ContainsKey(c) || endChars.ContainsValue(c);
+            return existsInDictionary;
+        }
+
+        private bool IsEndChar(char c)
+        {
+            char[] endChars = { 'ך', 'ם', 'ן', 'ף', 'ץ' };
+            return endChars.Contains(c);
+        }
+
+        private bool LetterChecker(char inList, char selected)
+        {
+            if (!IsInDictionary(selected))
+                return false;
+            bool fillLetter = inList == ReturnEndCharacter(selected);
+            return fillLetter;
+        }
+
         private void GuessButtonClick(object sender, RoutedEventArgs e)
         {
             bool flag = false;
 
             if (CharList.SelectedItem != null && WrongGuesses < MaximumGuess)
             {
-                foreach (Label l in ListofLabel)
+                var endOfWordLocations = new List<int>();
+                var words = WordNow.Value.Split(' ');
+                foreach (var word in words)
                 {
-                    if ((char)l.Content == (char)CharList.SelectedItem)
+                    endOfWordLocations.Add(WordNow.Value.IndexOf(word) + word.Length - 1);
+                }
+
+                ListofLabel.Reverse();
+                for (var i = 0; i < ListofLabel.Count; i++)
+                {
+                    var letterAtLabelLocation = (char)ListofLabel[i].Content;
+                    var letterSelected = (char)CharList.SelectedItem;
+
+                    if (endOfWordLocations.Contains(i) && LetterChecker(letterAtLabelLocation, letterSelected))
                     {
-                        l.Visibility = Visibility.Visible;
+                        ListofLabel[i].Visibility = Visibility.Visible;
+                        flag = true;
+                        continue;
+                    }
+
+                    if ((char)ListofLabel[i].Content == (char)CharList.SelectedItem)
+                    {
+                        ListofLabel[i].Visibility = Visibility.Visible;
                         flag = true;
                     }
                 }
+
+                ListofLabel.Reverse();
 
                 if (!flag)
                 {
@@ -155,7 +232,8 @@ namespace hangman
 
             if (HasWon(ListofLabel))
             {
-                _ = MessageBox.Show("You won! Press Start button to replay!");
+                var english = WordNow.Key;
+                _ = MessageBox.Show(english + " :באנגלית \n!ניצחת! קרדיטים בשביל כולם");
                 SwapButtonState();
                 ClearTable();
             }
@@ -173,9 +251,9 @@ namespace hangman
                     ShowWrongGuesses.Content = MaximumGuess - WrongGuesses;
                     if (WrongGuesses >= MaximumGuess)
                     {
-                        _ = MessageBox.Show("Game Over!");
-                        _ = MessageBox.Show("The correct word is " + WordNow);
-                        _ = MessageBox.Show("Press Start button to replay!");
+                        _ = MessageBox.Show("!סוף המשחק");
+                        _ = MessageBox.Show(WordNow + " :המילה הנכונה היא");
+                        _ = MessageBox.Show("!לחץ על הפעל כדי להפעיל מחדש");
                         SwapButtonState();
                         ClearTable();
                     }

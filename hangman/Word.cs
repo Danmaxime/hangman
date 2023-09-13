@@ -7,7 +7,7 @@ namespace hangman
     public class Word
     {
         private static readonly List<string> WordList = new List<string>();
-
+        private static readonly Dictionary<string ,string> WordDictionaryList = new Dictionary<string, string>();
         /* We can add new words to WordList below.
          * Each time the player starts a new game,
          * a random word is taken from WordList.
@@ -26,7 +26,7 @@ namespace hangman
             }
         }
 
-        public string TheWord { get; private set; }
+        public KeyValuePair<string,string> TheWord { get; private set; }
 
         /*
          * Static constructor for loading all
@@ -36,18 +36,28 @@ namespace hangman
 
         private Word()
         {
-            StreamReader sr = new StreamReader("word_list.txt");
+            StreamReader sr = new StreamReader("word_list.csv");
             while (!sr.EndOfStream)
             {
-                WordList.Add(sr.ReadLine());
+                var line = sr.ReadLine();
+                if (line == null)  continue;
+                var wordPair = line.Split(',');
+                if (WordDictionaryList.ContainsKey(wordPair[0])) continue;
+                WordDictionaryList.Add(wordPair[0], wordPair[1]);
             }
         }
 
         public void LoadWord()
         {
             Random rnd = new Random();
-            int num = rnd.Next(0, WordList.Count);
-            TheWord = WordList[num];
+            int num = rnd.Next(0, WordDictionaryList.Count);
+            TheWord = WordDictionaryList.ElementAt(num);
+
+            while (TheWord.Value.Length > 12)
+            {
+                num = rnd.Next(0, WordDictionaryList.Count);
+                TheWord = WordDictionaryList.ElementAt(num);
+            }
         }
 
     }
